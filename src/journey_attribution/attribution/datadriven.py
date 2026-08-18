@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 import shap
-from schemas import Journey, AttributionResult
+from journey_attribution.schemas import Journey, AttributionResult
 
 
 def _feature_frame(journeys: list[Journey]) -> tuple[pd.DataFrame, list[str], np.ndarray]:

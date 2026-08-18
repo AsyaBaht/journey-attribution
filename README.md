@@ -44,43 +44,60 @@ and correctness are different things.
 
 ## Architecture
 
-- `schemas.py` — typed `Touchpoint`, `Journey`, `AttributionResult`,
-  `GroundTruthEffect`. Every stage passes these, never raw dicts.
-- `simulator.py` — synthetic journey generator with known per-channel
-  effects. The most important file in the repo.
-- `baselines.py` — first-touch, last-touch, linear, time-decay,
-  position-based (U-shaped) heuristics.
-- `markov_attribution.py` — transition-probability chain + removal-effect
-  attribution, via absorbing Markov chain algebra (fundamental matrix).
-- `datadriven_attribution.py` — LightGBM classifier + SHAP, channel-level
-  credit from summed `|SHAP|` across each channel's features.
-- `evals/eval_suite.py` — simulation recovery, calibration, bootstrap
-  stability, cross-model agreement.
-- `extract_bigquery.py` — pulls real touchpoint + purchase data from the
-  public `bigquery-public-data.ga4_obfuscated_sample_ecommerce` dataset.
-  Requires your own (free-tier) GCP project — see file header for setup.
-- `journey_builder.py` — turns the raw BigQuery export into typed
-  `Journey` objects (drops touchpoints after a user's first purchase in
-  the window, to avoid contaminating a converted journey with post-purchase
-  activity).
-- `main.py` — CLI, runs either mode end to end.
+Package layout mirrors the pipeline stages (ingest → transform → attribute
+/ simulate → evaluate):
+
+- `src/journey_attribution/schemas.py` — typed `Touchpoint`, `Journey`,
+  `AttributionResult`, `GroundTruthEffect`. Every stage passes these, never
+  raw dicts.
+- `src/journey_attribution/simulation/simulator.py` — synthetic journey
+  generator with known per-channel effects. The most important file in the
+  repo.
+- `src/journey_attribution/attribution/baselines.py` — first-touch,
+  last-touch, linear, time-decay, position-based (U-shaped) heuristics.
+- `src/journey_attribution/attribution/markov.py` — transition-probability
+  chain + removal-effect attribution, via absorbing Markov chain algebra
+  (fundamental matrix).
+- `src/journey_attribution/attribution/datadriven.py` — LightGBM
+  classifier + SHAP, channel-level credit from summed `|SHAP|` across each
+  channel's features.
+- `src/journey_attribution/evaluation/eval_suite.py` — simulation
+  recovery, calibration, bootstrap stability, cross-model agreement.
+- `src/journey_attribution/ingestion/bigquery.py` — pulls real touchpoint +
+  purchase data from the public
+  `bigquery-public-data.ga4_obfuscated_sample_ecommerce` dataset into
+  `data/raw/`. Requires your own (free-tier) GCP project — see file header
+  for setup.
+- `src/journey_attribution/transform/journey_builder.py` — turns the raw
+  BigQuery export into typed `Journey` objects (drops touchpoints after a
+  user's first purchase in the window, to avoid contaminating a converted
+  journey with post-purchase activity).
+- `src/journey_attribution/cli.py` — CLI (`journey-attribution`), runs
+  either mode end to end. Defaults come from `config/settings.yaml`.
+- `tests/` — pytest suite: offline pipeline smoke test plus per-method
+  invariant checks (credits normalize to ~1.0, probabilities stay in
+  range). Runs in CI against the simulator only — no BigQuery credentials
+  needed.
 
 ## Running it
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # No setup needed — runs entirely against the simulator:
-python test_offline.py
-python main.py --mode simulate
+pytest
+journey-attribution --mode simulate
 
 # Real data — requires a free Google Cloud project with BigQuery enabled:
-pip install google-cloud-bigquery
+pip install -e ".[bigquery]"
 gcloud auth application-default login
 gcloud config set project <your-gcp-project-id>
-python extract_bigquery.py --project <your-gcp-project-id>
-python main.py --mode real
+python -m journey_attribution.ingestion.bigquery --project <your-gcp-project-id>
+journey-attribution --mode real
 ```
+
+Or via `make setup`, `make test`, `make simulate`, `make real`,
+`make extract PROJECT=<your-gcp-project-id>`.
 
 ## Known open items
 

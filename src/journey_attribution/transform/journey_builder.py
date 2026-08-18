@@ -10,10 +10,10 @@ needs to be stated, not buried in code.
 """
 from __future__ import annotations
 import pandas as pd
-from schemas import Touchpoint, Journey
+from journey_attribution.schemas import Touchpoint, Journey
 
 
-def build_journeys_from_csv(path: str = "data/raw_touchpoints.csv") -> list[Journey]:
+def build_journeys_from_csv(path: str = "data/raw/raw_touchpoints.csv") -> list[Journey]:
     df = pd.read_csv(path, parse_dates=["event_ts"])
     journeys: list[Journey] = []
 

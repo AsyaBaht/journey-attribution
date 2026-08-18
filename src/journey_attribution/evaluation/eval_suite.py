@@ -24,7 +24,7 @@ import random
 from dataclasses import dataclass, field
 from scipy.stats import spearmanr
 import numpy as np
-from schemas import Journey, AttributionResult, GroundTruthEffect
+from journey_attribution.schemas import Journey, AttributionResult, GroundTruthEffect
 
 
 @dataclass

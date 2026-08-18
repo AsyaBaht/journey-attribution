@@ -17,7 +17,7 @@ from __future__ import annotations
 import random
 import math
 from datetime import datetime, timedelta
-from schemas import Touchpoint, Journey, GroundTruthEffect
+from journey_attribution.schemas import Touchpoint, Journey, GroundTruthEffect
 
 # True effects, fixed by construction. Positive = increases conversion odds.
 # Deliberately includes one "high frequency, near-zero effect" channel

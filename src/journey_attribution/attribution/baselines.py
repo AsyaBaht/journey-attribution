@@ -7,7 +7,7 @@ not just whether they produce numbers.
 from __future__ import annotations
 import math
 from collections import defaultdict
-from schemas import Journey, AttributionResult
+from journey_attribution.schemas import Journey, AttributionResult
 
 
 def _normalize(credits: dict[str, float]) -> dict[str, float]:

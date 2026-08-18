@@ -1,17 +1,36 @@
 """
 CLI entrypoint.
 
-    python main.py --mode simulate                 # no setup needed
-    python main.py --mode real --data data/raw_touchpoints.csv   # after extract_bigquery.py
+    journey-attribution --mode simulate                 # no setup needed
+    journey-attribution --mode real --data data/raw/raw_touchpoints.csv   # after `journey-attribution-extract`
+
+Defaults (n_users, seed, data path) come from config/settings.yaml so a run
+is reproducible without relying on argparse defaults buried in code; CLI
+flags override the config file when passed explicitly.
 """
 from __future__ import annotations
 import argparse
-from simulator import generate_journeys, ground_truth
-from journey_builder import build_journeys_from_csv
-from baselines import all_baselines
-from markov_attribution import markov_removal_effect, markov_conversion_probability
-from datadriven_attribution import datadriven_attribution
-from evals.eval_suite import simulation_recovery, calibration, bootstrap_stability, cross_model_agreement
+from pathlib import Path
+
+import yaml
+
+from journey_attribution.simulation.simulator import generate_journeys, ground_truth
+from journey_attribution.transform.journey_builder import build_journeys_from_csv
+from journey_attribution.attribution.baselines import all_baselines
+from journey_attribution.attribution.markov import markov_removal_effect, markov_conversion_probability
+from journey_attribution.attribution.datadriven import datadriven_attribution
+from journey_attribution.evaluation.eval_suite import (
+    simulation_recovery, calibration, bootstrap_stability, cross_model_agreement,
+)
+
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "settings.yaml"
+
+
+def load_config(path: Path = DEFAULT_CONFIG_PATH) -> dict:
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return yaml.safe_load(f) or {}
 
 
 def run(journeys, truth=None) -> None:
@@ -48,16 +67,25 @@ def run(journeys, truth=None) -> None:
     print(f"=== Cross-model agreement ===\n  {agreement.detail}\n")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    config = load_config()
+    sim_cfg = config.get("simulate", {})
+    real_cfg = config.get("real", {})
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["simulate", "real"], default="simulate")
-    parser.add_argument("--data", default="data/raw_touchpoints.csv")
-    parser.add_argument("--n-users", type=int, default=8000)
+    parser.add_argument("--data", default=real_cfg.get("data_path", "data/raw/raw_touchpoints.csv"))
+    parser.add_argument("--n-users", type=int, default=sim_cfg.get("n_users", 8000))
+    parser.add_argument("--seed", type=int, default=sim_cfg.get("seed", 1))
     args = parser.parse_args()
 
     if args.mode == "simulate":
-        journeys = generate_journeys(n_users=args.n_users, seed=1)
+        journeys = generate_journeys(n_users=args.n_users, seed=args.seed)
         run(journeys, truth=ground_truth())
     else:
         journeys = build_journeys_from_csv(args.data)
         run(journeys, truth=None)
+
+
+if __name__ == "__main__":
+    main()

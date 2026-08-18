@@ -1,4 +1,22 @@
 __pycache__/
 *.pyc
 .env
-data/raw_touchpoints.csv
+.venv/
+
+# data lake tiers — regenerable / pulled from BigQuery, not versioned.
+# .gitkeep files keep the directory structure tracked.
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# packaging
+*.egg-info/
+build/
+dist/
+
+# test/tooling caches
+.pytest_cache/
+.ruff_cache/

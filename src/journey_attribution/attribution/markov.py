@@ -18,7 +18,7 @@ project — worth citing as such in the eventual write-up.
 from __future__ import annotations
 import numpy as np
 from collections import defaultdict
-from schemas import Journey, AttributionResult
+from journey_attribution.schemas import Journey, AttributionResult
 
 START, CONVERSION, NULL = "Start", "Conversion", "Null"
 

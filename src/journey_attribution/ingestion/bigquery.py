@@ -1,7 +1,7 @@
 """
 Extracts raw touchpoint + conversion data from the public GA4 sample
 dataset (bigquery-public-data.ga4_obfuscated_sample_ecommerce) and writes
-it to data/raw_touchpoints.csv for journey_builder.py to consume.
+it to data/raw/raw_touchpoints.csv for journey_builder.py to consume.
 
 Requires: a Google Cloud project with the BigQuery API enabled (free
 sandbox tier is sufficient at this data volume — you are not querying the
@@ -79,6 +79,6 @@ def main(project_id: str, output_path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", required=True, help="Your GCP project ID")
-    parser.add_argument("--output", default="data/raw_touchpoints.csv")
+    parser.add_argument("--output", default="data/raw/raw_touchpoints.csv")
     args = parser.parse_args()
     main(args.project, args.output)

@@ -1,0 +1,16 @@
+# Default pipeline configuration. CLI flags override these; this file is
+# the source of truth for defaults so runs are reproducible without having
+# to remember what the argparse defaults happened to be.
+
+simulate:
+  n_users: 8000
+  seed: 1
+
+real:
+  data_path: data/raw/raw_touchpoints.csv
+
+bigquery:
+  # No default project — must be supplied via config or --project, since
+  # it's account-specific. See src/journey_attribution/ingestion/bigquery.py.
+  project: null
+  output_path: data/raw/raw_touchpoints.csv
