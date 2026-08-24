@@ -109,6 +109,13 @@ def markov_removal_effect(journeys: list[Journey]) -> AttributionResult:
     return AttributionResult(method="markov_removal_effect", credits=credits)
 
 
+def transition_summary(journeys: list[Journey]) -> tuple[list[str], dict[tuple[str, str], float]]:
+    """States and raw transition counts, exposed for callers that want to
+    visualize journey flow (e.g. a Sankey diagram) rather than compute
+    removal effects."""
+    return _states(journeys), _transition_counts(journeys)
+
+
 def markov_conversion_probability(journeys: list[Journey]) -> float:
     """Exposed separately so the eval suite can check this number against
     the journeys' actual empirical conversion rate as a sanity check."""

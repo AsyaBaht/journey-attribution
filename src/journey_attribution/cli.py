@@ -22,6 +22,7 @@ from journey_attribution.attribution.datadriven import datadriven_attribution
 from journey_attribution.evaluation.eval_suite import (
     simulation_recovery, calibration, bootstrap_stability, cross_model_agreement,
 )
+from journey_attribution.reporting.report import build_report
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "settings.yaml"
 
@@ -33,7 +34,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def run(journeys, truth=None) -> None:
+def run(journeys, truth=None, report_path: str | None = None) -> None:
     actual_rate = sum(j.converted for j in journeys) / len(journeys)
     print(f"{len(journeys)} journeys, empirical conversion rate {actual_rate:.4f}\n")
 
@@ -66,6 +67,10 @@ def run(journeys, truth=None) -> None:
     agreement = cross_model_agreement(markov_result, dd_result)
     print(f"=== Cross-model agreement ===\n  {agreement.detail}\n")
 
+    if report_path:
+        build_report(journeys, results, report_path, diagnostics={"datadriven train AUC": dd_diag["train_auc"]})
+        print(f"Wrote HTML report to {report_path}")
+
 
 def main() -> None:
     config = load_config()
@@ -77,14 +82,16 @@ def main() -> None:
     parser.add_argument("--data", default=real_cfg.get("data_path", "data/raw/raw_touchpoints.csv"))
     parser.add_argument("--n-users", type=int, default=sim_cfg.get("n_users", 8000))
     parser.add_argument("--seed", type=int, default=sim_cfg.get("seed", 1))
+    parser.add_argument("--report", default=None, help="Path to write an HTML report with attribution "
+                         "comparison charts and journey visualizations (e.g. reports/report.html)")
     args = parser.parse_args()
 
     if args.mode == "simulate":
         journeys = generate_journeys(n_users=args.n_users, seed=args.seed)
-        run(journeys, truth=ground_truth())
+        run(journeys, truth=ground_truth(), report_path=args.report)
     else:
         journeys = build_journeys_from_csv(args.data)
-        run(journeys, truth=None)
+        run(journeys, truth=None, report_path=args.report)
 
 
 if __name__ == "__main__":
