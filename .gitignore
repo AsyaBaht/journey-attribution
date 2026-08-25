@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 .venv/
+.idea
 
 # data lake tiers — regenerable / pulled from BigQuery, not versioned.
 # .gitkeep files keep the directory structure tracked.
