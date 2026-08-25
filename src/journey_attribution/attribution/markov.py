@@ -14,6 +14,8 @@ that channel's outgoing transitions redirected entirely to Null (simulating
 conversion probability, and take the drop as that channel's credit. This is
 the standard approach (Anderl et al.), not something invented for this
 project — worth citing as such in the eventual write-up.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import numpy as np

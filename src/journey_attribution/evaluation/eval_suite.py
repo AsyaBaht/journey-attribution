@@ -18,6 +18,8 @@ score "correctness":
 4. Cross-model agreement — do two independent methods agree on which
    channels matter? Disagreement isn't automatically a bug in one of
    them — it's often the most interesting finding in the whole project.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import random

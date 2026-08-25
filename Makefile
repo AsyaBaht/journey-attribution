@@ -1,7 +1,7 @@
-.PHONY: setup test lint simulate real extract
+.PHONY: setup test lint simulate real extract report
 
 setup:
-	pip install -e ".[dev,bigquery]"
+	pip install -e ".[dev,bigquery,report]"
 
 test:
 	pytest
@@ -17,3 +17,6 @@ real:
 
 extract:
 	python -m journey_attribution.ingestion.bigquery --project $(PROJECT)
+
+report:
+	journey-attribution --mode real --report reports/report.html

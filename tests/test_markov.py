@@ -1,3 +1,9 @@
+"""Tests for Markov removal-effect attribution: credits must be normalized
+and non-negative, and the chain's total conversion probability must be a
+valid probability that matches the empirical conversion rate.
+
+Author: Anastasiia Bakhtoiarova
+"""
 from __future__ import annotations
 import pytest
 

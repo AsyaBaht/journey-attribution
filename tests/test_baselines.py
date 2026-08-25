@@ -1,3 +1,9 @@
+"""Tests for the heuristic attribution baselines (first/last touch, linear,
+time-decay, position-based): every method's credits must be normalized and
+non-negative regardless of the underlying weighting scheme.
+
+Author: Anastasiia Bakhtoiarova
+"""
 from __future__ import annotations
 import pytest
 

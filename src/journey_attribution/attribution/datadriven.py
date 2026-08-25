@@ -8,6 +8,8 @@ Feature design choice: one feature per channel (count of exposures), plus
 first/last-touch indicators. This lets SHAP attribute credit at the
 channel level directly, which is what we need to compare against Markov's
 per-channel removal effect on equal footing.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import numpy as np

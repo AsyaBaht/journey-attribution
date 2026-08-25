@@ -1,3 +1,9 @@
+"""Tests for the data-driven (LightGBM + SHAP) attribution method: credits
+must be normalized and non-negative, and the model must actually learn a
+signal from journey features rather than just producing well-formed noise.
+
+Author: Anastasiia Bakhtoiarova
+"""
 from __future__ import annotations
 import pytest
 

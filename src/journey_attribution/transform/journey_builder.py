@@ -1,5 +1,5 @@
 """
-Turns the raw CSV from extract_bigquery.py into typed Journey objects.
+Turns the raw CSV from journey_attribution.ingestion.bigquery into typed Journey objects.
 
 Design decision worth flagging explicitly: touchpoints AFTER a user's first
 purchase in the window are dropped. Without this, a returning customer's
@@ -7,6 +7,8 @@ second-purchase journey gets contaminated with touchpoints that happened
 after they'd already converted once — which would bias every attribution
 method here, not just Markov. This is exactly the kind of assumption that
 needs to be stated, not buried in code.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import pandas as pd

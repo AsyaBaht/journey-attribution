@@ -3,6 +3,8 @@ Structured types for the whole pipeline. Same discipline as parks-planner:
 every stage passes typed objects, not raw dicts — makes the eval suite and
 the simulator (which needs to compare against a known ground truth) both
 much easier to reason about.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 from datetime import datetime

@@ -3,6 +3,8 @@ Heuristic attribution baselines. Not the point of the project, but every
 attribution write-up needs these as a reference frame — the interesting
 question is whether Markov/data-driven attribution actually beats these,
 not just whether they produce numbers.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import math

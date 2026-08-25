@@ -20,3 +20,12 @@ dist/
 # test/tooling caches
 .pytest_cache/
 .ruff_cache/
+
+# generated report output — regenerable via `journey-attribution --report`, not versioned.
+reports/
+
+# GCP credential files — should never live in the repo, only in ~/.config/gcloud
+*-key.json
+*service-account*.json
+*credentials*.json
+client_secret*.json

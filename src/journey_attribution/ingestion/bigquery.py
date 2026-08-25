@@ -20,6 +20,8 @@ limited." The channel-grouping CASE statement below mirrors Google's
 default channel grouping logic but is a simplification. Expect to spend
 real time on data-quality triage once you actually pull this — that's
 part of the job, not a bug in this script.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import argparse

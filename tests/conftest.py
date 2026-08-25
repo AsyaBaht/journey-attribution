@@ -1,7 +1,10 @@
 """Shared fixtures: simulated journeys are the only place ground truth
 exists, so every test that needs journeys should draw from here rather than
 generating its own ad hoc data — keeps results comparable across tests and
-matches what the offline smoke test / README results table were run on."""
+matches what the offline smoke test / README results table were run on.
+
+Author: Anastasiia Bakhtoiarova
+"""
 from __future__ import annotations
 import pytest
 

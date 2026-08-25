@@ -12,6 +12,8 @@ Generative model: each channel has a true log-odds effect. A user's
 conversion probability is a logistic function of the unique channels they
 were exposed to (diminishing returns on repeat exposure to the same
 channel — repeats count at a fraction of the first-exposure effect).
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import random

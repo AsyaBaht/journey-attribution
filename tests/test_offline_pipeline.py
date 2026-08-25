@@ -8,6 +8,8 @@ legitimately score badly on simulation_recovery (see README — Markov's
 known removal-effect confound) without that being a bug. What must hold is
 that the harness itself behaves correctly (calibration close to exact,
 agreement score in-range) and that results are actually produced.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 

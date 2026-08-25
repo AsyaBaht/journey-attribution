@@ -2,11 +2,13 @@
 CLI entrypoint.
 
     journey-attribution --mode simulate                 # no setup needed
-    journey-attribution --mode real --data data/raw/raw_touchpoints.csv   # after `journey-attribution-extract`
+    journey-attribution --mode real --data data/raw/raw_touchpoints.csv   # after `python -m journey_attribution.ingestion.bigquery --project <id>`
 
 Defaults (n_users, seed, data path) come from config/settings.yaml so a run
 is reproducible without relying on argparse defaults buried in code; CLI
 flags override the config file when passed explicitly.
+
+Author: Anastasiia Bakhtoiarova
 """
 from __future__ import annotations
 import argparse
