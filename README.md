@@ -15,33 +15,119 @@ truth to check against. `simulator.py` solves that by generating synthetic
 journeys with a **known, fixed data-generating process**, so every method
 gets scored against the truth before it's ever pointed at the real GA4 data.
 
+The DGP is deliberately *order-dependent*: channels are drawn from a
+first-order Markov process rather than i.i.d., and specific ordered pairs
+of consecutive channels carry their own effects. This matters more than it
+sounds. With i.i.d. draws the true transition matrix is rank-1 —
+`P(b | a) = prevalence(b)` for every `a` — so a Markov attribution model
+would be scored on recovering sequence structure from a process that has
+none, and would fail for reasons that say nothing about the method.
+Validating a sequence model requires a DGP with sequences in it.
+
+## Two definitions of "truth", and why the choice decides the answer
+
+Before any result: scoring an attribution method requires deciding what
+you're scoring it *against*, and the obvious choice is wrong.
+
+Every method here emits a **normalized credit share** — a number that
+necessarily carries channel volume, because a channel touched three times
+as often contributes more total conversions at the same per-touch strength.
+The simulator's `TRUE_CHANNEL_EFFECTS`, meanwhile, are **per-exposure
+log-odds parameters** — volume-free by construction. Rank-correlating one
+against the other compares two different quantities and marks a correct
+method wrong for correctly reflecting volume.
+
+So the simulator computes both (`simulator.true_removal_effect`):
+
+- **true removal share** — the mean drop in conversion probability when
+  every touch of a channel is deleted from every journey, computed
+  directly from the DGP. This is the estimand removal-effect attribution
+  actually targets, and it's the default scoring target.
+- **true log-odds effect** — the per-exposure parameter, reported
+  alongside it.
+
+The two only correlate at ρ = 0.89 with each other, and the gap between a
+method's two scores *is* the frequency confound, made legible.
+
 ## A real finding from the simulator (not a hypothetical)
 
 Running the full pipeline against 8,000 simulated journeys with known
-channel effects (`journey-attribution --mode simulate`):
+channel effects *and* known sequence structure (`journey-attribution
+--mode simulate`, empirical conversion rate 23.7%):
 
-| Method | Spearman ρ vs. true effect |
-|---|---|
-| First/last-touch, linear, time-decay, position-based | ~0.00 (no better than chance) |
-| **Markov removal effect** | **−0.18** (worse than chance) |
-| **Data-driven (LightGBM + SHAP)** | **0.79** (strong recovery) |
+| Method | ρ vs. removal share | ρ vs. log-odds |
+|---|---|---|
+| first_touch | +0.36 | −0.04 |
+| **last_touch** | **+0.79** | +0.61 |
+| linear / time_decay / position_based | +0.50 | +0.21 |
+| **Markov removal effect** | **+0.39** (worst of the seven) | +0.07 |
+| **Data-driven (LightGBM + SHAP)** | **+0.82** | +0.86 |
 
-The Markov model's predicted overall conversion rate matched the empirical
-rate *exactly* (calibration error 0.0000) — the chain math is correct. But
-its per-channel removal-effect ranking is actively **anti-correlated**
-with the true effects, because removal effect is confounded by channel
-**frequency**, not just causal strength. In the simulation, `email` is rare
-but has the strongest true effect (log-odds 0.70); `display` is common but
-has almost no effect (log-odds 0.05). Markov ranks `email` *last* by credit
-and `display` third — nearly the opposite of the truth. This is a
-documented, real limitation of Markov attribution (Anderl et al.) — not a
-bug in this implementation — and it's exactly the kind of finding that
-never shows up if you only look at real data with no ground truth to check
-against.
+**The finding: Markov's removal effect is channel frequency wearing a
+different hat.** Its credit ranking is a *perfect* rank-copy of raw
+touchpoint volume — ρ = **1.000**, not approximately — and its score
+against the correct estimand equals the volume correlation exactly:
 
-Bootstrap resampling shows the Markov ranking is *stable* (low variance
-across resamples) despite being wrong — a useful reminder that stability
-and correctness are different things.
+```
+rho(markov credit, channel volume)  = +1.000
+rho(channel volume, removal share)  = +0.393
+rho(markov credit, removal share)   = +0.393   <- identical
+```
+
+Markov contributes nothing beyond ranking channels by how often they
+appear. That is not a coincidence of the channel mix: the simulator draws
+channels from a first-order Markov process with genuinely
+previous-channel-dependent transitions (`P(paid_search | social) = 0.438`
+against a marginal of `0.222`) and pays ordered-pair bonuses on specific
+consecutive transitions, so permuting a journey's channels moves its
+conversion probability by 0.04 on average and up to 0.42. There is real
+sequence structure sitting in the data for a sequence model to find, and
+the removal effect finds none of it. This is a documented limitation of
+Markov attribution (Anderl et al.) — not a bug in this implementation —
+and it's exactly the kind of finding that never shows up if you only look
+at real data with no ground truth to check against.
+
+The per-channel table shows where it goes wrong:
+
+| channel | true log-odds | true removal share | touch volume | Markov credit |
+|---|---|---|---|---|
+| paid_search | 0.55 | 0.358 | 8,122 | 0.203 |
+| **email** | **0.70** | **0.223** | **2,978** | **0.109** |
+| organic_search | 0.35 | 0.167 | 7,654 | 0.189 |
+| direct | 0.40 | 0.119 | 4,746 | 0.139 |
+| social | 0.10 | 0.074 | 4,653 | 0.132 |
+| referral | 0.20 | 0.030 | 2,436 | 0.081 |
+| **display** | **0.05** | **0.029** | **5,451** | **0.147** |
+
+`email` is rare but the strongest channel and is second by true removal
+share; Markov ranks it sixth. `display` is common and nearly worthless and
+is last by removal share; Markov ranks it third. Both errors are volume.
+
+Two things worth flagging that fall out of the same run:
+
+- **`last_touch` scores second-best (+0.79)** — better than every other
+  heuristic and far better than Markov. That's not an accident either: the
+  DGP's pair effects put value on being downstream, so the last touch
+  genuinely carries signal here. A crude heuristic beating the
+  sophisticated method on the sophisticated method's home turf is the sort
+  of result worth keeping rather than tuning away.
+- **Bootstrap resampling shows the Markov ranking is extremely stable**
+  (worst per-channel coefficient of variation 0.019 across 15 resamples)
+  despite being the least accurate method in the table — a useful reminder
+  that stability and correctness are different things.
+
+### What the calibration check does and doesn't prove
+
+The Markov chain's predicted overall conversion rate matches the empirical
+rate exactly (0.2370 vs 0.2370, and 0.0163 vs 0.0163 on real data). This
+is a **mathematical identity, not a model-fit result**: for a chain
+estimated by MLE from transition counts, flow is conserved and each
+journey enters `Start` exactly once, so absorption probability from `Start`
+*must* equal the empirical rate — on any dataset, including degenerate
+ones (a converters-only subset returns 1.000000 against an empirical
+1.000000). It's a sound regression test on the linear algebra and nothing
+more; it carries no information about attribution quality, and shouldn't
+be read as evidence the model is right.
 
 ## Results on the real GA4 data
 
@@ -55,10 +141,20 @@ against 267,084 real journeys pulled from
 | Markov removal effect | organic_search (0.29) | direct (0.23) | referral (0.21) |
 | Data-driven (LightGBM + SHAP) | **other (0.43)** | referral (0.26) | organic_search (0.13) |
 
-Calibration is again exact (predicted vs. actual conversion rate,
-abs diff 0.0000). Cross-model agreement between Markov and the data-driven
-model is moderate (Spearman ρ = 0.49) — weaker than either method's
-self-consistency, and driven mostly by the `other` channel: the
+The simulator finding above is directly load-bearing for how to read this
+table. Markov's real-data ranking (organic_search, direct, referral) tracks
+raw touchpoint volume almost exactly — organic_search is 34.4% of all
+touches — which is the *same* signature the simulator shows is the method
+reproducing frequency rather than contribution. On real data there's no way
+to tell those two apart; the simulator is the only reason we know which one
+this most likely is. **The Markov column here should be read as a volume
+ranking until the channel grouping is fixed** (see "Known open items").
+
+Calibration is again exact (0.0163 vs 0.0163) — which, per the section
+above, is an identity rather than evidence of fit. Cross-model agreement
+between Markov and the data-driven model is moderate (Spearman ρ = 0.49) —
+weaker than either method's self-consistency, and driven mostly by the
+`other` channel: the
 data-driven model assigns it dominant credit, which given the sample
 dataset's documented obfuscation (see "Known open items" below) reads more
 like a **data-quality artifact of the channel-grouping simplification**
@@ -116,8 +212,11 @@ Package layout mirrors the pipeline stages (ingest → transform → attribute
   `AttributionResult`, `GroundTruthEffect`. Every stage passes these, never
   raw dicts.
 - `src/journey_attribution/simulation/simulator.py` — synthetic journey
-  generator with known per-channel effects. The most important file in the
-  repo.
+  generator with known per-channel effects, known ordered-pair sequence
+  effects, and a first-order Markov transition process over channels. Also
+  computes `true_removal_effect()` — the DGP's own counterfactual, which is
+  what the attribution methods are scored against. The most important file
+  in the repo.
 - `src/journey_attribution/attribution/baselines.py` — first-touch,
   last-touch, linear, time-decay, position-based (U-shaped) heuristics.
 - `src/journey_attribution/attribution/markov.py` — transition-probability
@@ -127,7 +226,8 @@ Package layout mirrors the pipeline stages (ingest → transform → attribute
   classifier + SHAP, channel-level credit from summed `|SHAP|` across each
   channel's features.
 - `src/journey_attribution/evaluation/eval_suite.py` — simulation
-  recovery, calibration, bootstrap stability, cross-model agreement.
+  recovery (against either truth target — see "Two definitions of truth"),
+  calibration, bootstrap stability, cross-model agreement.
 - `src/journey_attribution/ingestion/bigquery.py` — pulls real touchpoint +
   purchase data from the public
   `bigquery-public-data.ga4_obfuscated_sample_ecommerce` dataset into
@@ -147,10 +247,14 @@ Package layout mirrors the pipeline stages (ingest → transform → attribute
 - `src/journey_attribution/cli.py` — CLI (`journey-attribution`), runs
   either mode end to end and optionally writes the HTML report via
   `--report <path>`. Defaults come from `config/settings.yaml`.
-- `tests/` — pytest suite: offline pipeline smoke test plus per-method
+- `tests/` — pytest suite: offline pipeline smoke test, per-method
   invariant checks (credits normalize to ~1.0, probabilities stay in
-  range). Runs in CI against the simulator only — no BigQuery credentials
-  needed.
+  range), plus DGP guards in `test_simulator.py` that assert the two
+  properties everything else depends on — touchpoint timestamps are
+  monotonic in generation order, and the DGP is genuinely order-dependent.
+  Both failure modes produce plausible-looking numbers rather than errors,
+  so nothing else would catch them. Runs in CI against the simulator only —
+  no BigQuery credentials needed.
 
 ## Running it
 
@@ -190,6 +294,18 @@ Or via `make setup`, `make test`, `make simulate`, `make real`,
 - `conversion_value` isn't populated from real data yet (GA4 obfuscated
   sample doesn't reliably expose purchase revenue) — attribution here is
   by conversion count, not revenue-weighted.
+- The simulator's baseline conversion rate is **too high to be realistic**:
+  `BASE_LOG_ODDS = -2.8` plus the positive pair effects yields 23.7%,
+  against 1.63% on the real GA4 pull. Rank-recovery scores are unlikely to
+  be sensitive to this, but the low-conversion regime is exactly where
+  attribution methods are hardest and least stable, so the validation is
+  currently running on the easy end. Should come down to roughly −4.5 and
+  the recovery table should be re-run.
+- The data-driven method computes SHAP on its own training data with no
+  holdout, and sums `|SHAP|` — an importance measure that discards sign —
+  to build channel credit. Held-out AUC is 0.64 against 0.73 in-sample, and
+  the reported `train_auc` diagnostic is in-sample. Both should be fixed
+  before the +0.82 recovery score is quoted as a clean win.
 - Next: tighten the `other`-bucket channel grouping against the real
   `traffic_source.source`/`medium` values actually observed in the pull,
   re-run, and check whether Markov/data-driven agreement improves once

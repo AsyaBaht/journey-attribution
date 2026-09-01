@@ -23,6 +23,7 @@ from journey_attribution.attribution.markov import markov_removal_effect, markov
 from journey_attribution.attribution.datadriven import datadriven_attribution
 from journey_attribution.evaluation.eval_suite import (
     simulation_recovery, calibration, bootstrap_stability, cross_model_agreement,
+    TARGET_LOG_ODDS, TARGET_REMOVAL_SHARE,
 )
 from journey_attribution.reporting.report import build_report
 
@@ -54,9 +55,15 @@ def run(journeys, truth=None, report_path: str | None = None) -> None:
 
     if truth:
         print("=== Simulation recovery (only available with simulated ground truth) ===")
+        print("  Scored against both definitions of truth. 'removal share' is the")
+        print("  estimand these methods actually target (normalized credit share,")
+        print("  volume included); 'log-odds' is the volume-free per-exposure DGP")
+        print("  parameter. The gap between the columns is the frequency confound.\n")
+        print(f"  {'method':26s} {'vs removal share':>18s} {'vs log-odds':>13s}")
         for method, result in results.items():
-            ev = simulation_recovery(result, truth)
-            print(f"  {ev.detail}")
+            rho_removal = simulation_recovery(result, truth, TARGET_REMOVAL_SHARE).value
+            rho_log_odds = simulation_recovery(result, truth, TARGET_LOG_ODDS).value
+            print(f"  {method:26s} {rho_removal:>+18.3f} {rho_log_odds:>+13.3f}")
         print()
 
     markov_p = markov_conversion_probability(journeys)
@@ -90,7 +97,9 @@ def main() -> None:
 
     if args.mode == "simulate":
         journeys = generate_journeys(n_users=args.n_users, seed=args.seed)
-        run(journeys, truth=ground_truth(), report_path=args.report)
+        # ground_truth needs the journeys: the counterfactual removal share
+        # is a property of this sample, not of the DGP parameters alone.
+        run(journeys, truth=ground_truth(journeys), report_path=args.report)
     else:
         journeys = build_journeys_from_csv(args.data)
         run(journeys, truth=None, report_path=args.report)

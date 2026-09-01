@@ -17,5 +17,7 @@ def simulated_journeys():
 
 
 @pytest.fixture(scope="session")
-def truth():
-    return ground_truth()
+def truth(simulated_journeys):
+    # Built against the journeys so true_removal_share is populated — the
+    # counterfactual is a property of the sample, not of the DGP parameters.
+    return ground_truth(simulated_journeys)

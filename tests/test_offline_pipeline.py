@@ -32,11 +32,13 @@ def test_full_pipeline_smoke(simulated_journeys, truth):
 
     assert dd_diag["train_auc"] > 0.5, "data-driven model should learn something better than chance"
 
-    recovery_scores = {
-        method: simulation_recovery(result, truth).value
-        for method, result in results.items()
-    }
-    assert set(recovery_scores) == set(results)
+    for target in ("removal_share", "log_odds"):
+        recovery_scores = {
+            method: simulation_recovery(result, truth, target).value
+            for method, result in results.items()
+        }
+        assert set(recovery_scores) == set(results)
+        assert all(-1.0 <= v <= 1.0 for v in recovery_scores.values())
 
     markov_p = markov_conversion_probability(simulated_journeys)
     cal = calibration(markov_p, actual_rate, "markov")

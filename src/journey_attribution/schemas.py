@@ -45,6 +45,20 @@ class AttributionResult(BaseModel):
 class GroundTruthEffect(BaseModel):
     """Only produced by the simulator, where the true generative effect of
     each channel is known by construction. This is what makes evaluation
-    possible at all — real data never has this."""
+    possible at all — real data never has this.
+
+    Two different notions of "truth", because attribution methods estimate
+    two different things and scoring one against the other marks correct
+    methods wrong:
+
+    - `true_log_odds_effect`: the per-exposure DGP parameter. Volume-free
+      and context-free.
+    - `true_removal_share`: the channel's share of total counterfactual
+      conversion loss on a *specific* set of journeys, so it carries volume
+      and adjacency effects. This is what a normalized credit share from
+      any of the attribution methods here is actually estimating. Only
+      populated when ground truth is requested against journeys.
+    """
     channel: str
     true_log_odds_effect: float
+    true_removal_share: float | None = None
